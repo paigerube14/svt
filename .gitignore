@@ -10,3 +10,4 @@ target/
 results/
 .pydevproject
 current_environment.json
+*.out
