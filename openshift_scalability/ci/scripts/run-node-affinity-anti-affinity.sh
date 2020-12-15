@@ -1,12 +1,17 @@
 #!/bin/bash
 # set -x
+if [ "$#" -ne 1 ]; then
+  echo "syntax: $0 <TYPE>"
+  echo "<TYPE> should be either golang or python"
+  exit 1
+fi
 
-date
-uname -a
-oc get clusterversion
-oc version
-oc get node --show-labels
-oc describe node | grep Runtime
+#date
+#uname -a
+#oc get clusterversion
+#oc version
+#oc get node --show-labels
+#oc describe node | grep Runtime
 
 compute_nodes=$(oc get nodes -l 'node-role.kubernetes.io/worker=' | awk '{print $1}' | grep -v NAME | xargs)
 
@@ -42,6 +47,22 @@ oc label nodes ${node_array[2]} cpu=6
 echo -e "\nLabeling node ${node_array[1]} with label 'beta.kubernetes.io/arch=intel'"
 oc label nodes ${node_array[1]} --overwrite beta.kubernetes.io/arch=intel
 
+function golang_clusterloader() {
+  # Export kube config
+  export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
+  #### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
+  ## - Absolute path to config file needed
+  ## - .yaml extension is required now in config file name
+  ## - full path to the config file  must be under 70 characters total
+  MY_CONFIG=../../config/golang/node-affinity.yaml
+  # loading cluster based on yaml config file
+  VIPERCONFIG=$MY_CONFIG openshift-tests run-test "[Feature:Performance][Serial][Slow] Load cluster should load the cluster [Suite:openshift]"
+}
+
+function python_clusterloader() {
+  MY_CONFIG=config/node-affinity.yaml
+  python cluster-loader.py -f $MY_CONFIG
+}
 
 function show_node_labels() {
   oc get node --show-labels
@@ -52,11 +73,39 @@ function show_node_labels() {
 
 function check_no_error_pods()
 {
-  error=`oc get pods --all-namespaces | grep Error | wc -l`
+  error=`oc get pods -n $1 | grep Error | wc -l`
   if [ $error -ne 0 ]; then
     echo "$error pods found, exiting"
+    #loop to find logs of error pods?
+
     exit 1
   fi
+}
+
+function wait_for_project_termination() {
+  COUNTER=0
+  terminating=$(oc get projects | grep $1 | grep Terminating | wc -l)
+  while [ $terminating -ne 0 ]; do
+    sleep 15
+    terminating=$(oc get projects | grep $1 | grep Terminating | wc -l)
+    echo "$terminating projects are still terminating"
+    COUNTER=$((COUNTER + 1))
+    if [ $COUNTER -ge 20 ]; then
+      echo "$terminating projects are still terminating after 5 minutes"
+      exit 1
+    fi
+  done
+  svt_proj=$(oc get projects | grep $1 | wc -l)
+  if [ $svt_proj -ne 0 ]; then
+    echo "$svt_proj $1 projects are still there"
+    exit 1
+  fi
+  pods=$(oc get pods -A | grep $1 | wc -l)
+  if [ $pods -ne 0 ]; then
+    echo "$pods $1 pods are still there"
+    exit 1
+  fi
+
 }
 
 show_node_labels
@@ -67,24 +116,27 @@ sleep 5
 # start GoLang cluster-loader
 export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
 
-cd /root/svt/openshift_scalability
-ls -ltr config/golang
+#cd /root/svt/openshift_scalability
+ls -ltr ../../config/golang
 
-#### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
-## - Absolute path to config file needed
-## - .yaml extension is required now in config file name
-## - full path to the config file  must be under 70 characters total
 
-MY_CONFIG=/root/svt/openshift_scalability/config/golang/node-affinity.yaml
-echo -e "\nRunning GoLang cluster-loader from openshift-tests binary with config file: ${MY_CONFIG}"
-echo -e "\nContents of  config file: ${MY_CONFIG}"
-cat ${MY_CONFIG}
-
-VIPERCONFIG=$MY_CONFIG openshift-tests run-test "[Feature:Performance][Serial][Slow] Load cluster should load the cluster [Suite:openshift]"
+echo "Run tests"
+if [ "$TYPE" == "golang" ]; then
+  golang_clusterloader
+elif [ "$TYPE" == "python" ]; then
+  python_clusterloader
+else
+  echo "$TYPE is not a valid option, available options: golang, python"
+  exit 1
+fi
 
 sleep 30
 
-check_no_error_pods
+
+
+check_no_error_pods node-affinity-0
+
+check_no_error_pods node-anti-affinity-0
 
 oc get pods --all-namespaces -o wide
 
@@ -100,6 +152,8 @@ oc delete project node-anti-affinity-0
 
 ######### TO DO:
 ######### Need to clean up, delete projects and wait till all pods are gone
+wait_for_project_termination node-affinity-0
+wait_for_project_termination node-anti-affinity-0
 
 sleep 30
 
