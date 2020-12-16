@@ -4,20 +4,26 @@ projects:
     tuning: default
     ifexists: delete
     pods:
-      - num: 200
+      - total: 30
+      - num: 100
         image: gcr.io/google_containers/pause-amd64:3.0
         basename: pausepods
         file: ../../content/pod-pause-node-affinity.json
+        storage:
+          - type: none
 
   - num: 1
     basename: node-anti-affinity-
     tuning: default
     ifexists: delete
     pods:
-      - num: 130
+      - total: 30
+      - num: 100
         image: docker.io/ocpqe/hello-pod
         basename: hellopods
         file: ../../content/pod-hello-node-anti-affinity.json
+        storage:
+          - type: none
 
 quotas:
   - name: default

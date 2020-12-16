@@ -6,48 +6,14 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-#date
-#uname -a
-#oc get clusterversion
-#oc version
-#oc get node --show-labels
-#oc describe node | grep Runtime
-
-compute_nodes=$(oc get nodes -l 'node-role.kubernetes.io/worker=' | awk '{print $1}' | grep -v NAME | xargs)
-
-echo -e "\nWorker  nodes are: $compute_nodes"
-
-declare -a node_array
-counter=1
-
-oc get nodes -l 'node-role.kubernetes.io/worker='
-oc describe nodes -l 'node-role.kubernetes.io/worker=' 
-
-initial_node_label="beta.kubernetes.io/arch=amd64"
-
-# Configuration: label nodes  for Affinity and anti-affinity scheduling
-for n in ${compute_nodes}; do
-  node_array[${counter}]=${n}
-  counter=$((counter+1))
-done
-
-# output node array elements
-for i in {1..2}; do
-  echo "Array element node_array index $i has value : ${node_array[${i}]}"
-done
-
-
-# Configuration: label nodes  for Affinity and anti-affinity scheduling
-echo -e "\nLabeling node ${node_array[1]} with label 'cpu=4'"
-oc label nodes ${node_array[1]} cpu=4
-
-echo -e "\nLabeling node ${node_array[2]} with label 'cpu=6'"
-oc label nodes ${node_array[2]} cpu=6
-
-echo -e "\nLabeling node ${node_array[1]} with label 'beta.kubernetes.io/arch=intel'"
-oc label nodes ${node_array[1]} --overwrite beta.kubernetes.io/arch=intel
+TYPE=$1
 
 function golang_clusterloader() {
+  # start GoLang cluster-loader
+  export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
+
+  #cd /root/svt/openshift_scalability
+  ls -ltr ../../config/golang
   # Export kube config
   export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
   #### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
@@ -60,8 +26,9 @@ function golang_clusterloader() {
 }
 
 function python_clusterloader() {
-  MY_CONFIG=config/node-affinity.yaml
-  python cluster-loader.py -f $MY_CONFIG
+  MY_CONFIG=../../config/node-affinity.yaml
+  python --version
+  python ../../cluster-loader.py -f $MY_CONFIG
 }
 
 function show_node_labels() {
@@ -95,30 +62,63 @@ function wait_for_project_termination() {
       exit 1
     fi
   done
-  svt_proj=$(oc get projects | grep $1 | wc -l)
-  if [ $svt_proj -ne 0 ]; then
-    echo "$svt_proj $1 projects are still there"
+  proj=$(oc get projects | grep $1 | wc -l)
+  if [ $proj -ne 0 ]; then
+    echo "$proj $1 projects are still there"
     exit 1
   fi
-  pods=$(oc get pods -A | grep $1 | wc -l)
-  if [ $pods -ne 0 ]; then
-    echo "$pods $1 pods are still there"
+  pods_in_proj=$(oc get pods -A | grep $1 | wc -l)
+  if [ $pods_in_proj -ne 0 ]; then
+    echo "$pods_in_proj $1 pods are still there"
     exit 1
   fi
 
 }
 
-show_node_labels
+#date
+#uname -a
+#oc get clusterversion
+#oc version
+#oc get node --show-labels
+#oc describe node | grep Runtime
+
+compute_nodes=$(oc get nodes -l 'node-role.kubernetes.io/worker=' | awk '{print $1}' | grep -v NAME | xargs)
+
+echo -e "\nWorker  nodes are: $compute_nodes"
+
+declare -a node_array
+counter=1
+
+oc get nodes -l 'node-role.kubernetes.io/worker='
+oc describe nodes -l 'node-role.kubernetes.io/worker='
+
+initial_node_label="beta.kubernetes.io/arch=amd64"
+
+# Configuration: label nodes  for Affinity and anti-affinity scheduling
+for n in ${compute_nodes}; do
+  node_array[${counter}]=${n}
+  counter=$((counter+1))
+done
+
+# output node array elements
+for i in {1..2}; do
+  echo "Array element node_array index $i has value : ${node_array[${i}]}"
+done
+
+
+# Configuration: label nodes  for Affinity and anti-affinity scheduling
+echo -e "\nLabeling node ${node_array[1]} with label 'cpu=4'"
+oc label nodes ${node_array[1]} cpu=4
+
+echo -e "\nLabeling node ${node_array[2]} with label 'cpu=6'"
+oc label nodes ${node_array[2]} cpu=6
+
+echo -e "\nLabeling node ${node_array[1]} with label 'beta.kubernetes.io/arch=intel'"
+oc label nodes ${node_array[1]} --overwrite beta.kubernetes.io/arch=intel
+
+#show_node_labels
 
 sleep 5
-
-
-# start GoLang cluster-loader
-export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
-
-#cd /root/svt/openshift_scalability
-ls -ltr ../../config/golang
-
 
 echo "Run tests"
 if [ "$TYPE" == "golang" ]; then
@@ -132,27 +132,30 @@ fi
 
 sleep 30
 
-
-
 check_no_error_pods node-affinity-0
 
 check_no_error_pods node-anti-affinity-0
 
-oc get pods --all-namespaces -o wide
 
 ## TO DO:  check pod counts expecting 130 pods per namespace
-oc get pods -n node-affinity-0 -o wide | grep "pausepods" | grep ${node_array[2]} | grep Running | wc -l
-oc get pods -n node-anti-affinity-0 -o wide | grep "hellopods" | grep ${node_array[1]} | grep Running | wc -l
+echo "nodes $node_array"
+affinity_pods=$(oc get pods -n node-affinity-0 -o wide | grep "pausepods" | grep ${node_array[2]} | grep Running | wc -l)
+anti_affinity_pods=$(oc get pods -n node-anti-affinity-0 -o wide | grep "hellopods" | grep ${node_array[1]} | grep Running | wc -l)
+
+if [ "$TYPE" == "golang" ]; then
+  pod_counts=$(python -c "import get_pod_total; get_pod_total.get_pod_counts_golang('$MY_CONFIG')")
+elif [ "$TYPE" == "python" ]; then
+  pod_counts=$(python -c "import get_pod_total; get_pod_total.get_pod_counts_python('$MY_CONFIG')")
+fi
 
 sleep 60
 
 # delete projects:  cleanup
-oc delete project node-affinity-0
-oc delete project node-anti-affinity-0
-
-######### TO DO:
 ######### Need to clean up, delete projects and wait till all pods are gone
+oc delete project node-affinity-0
 wait_for_project_termination node-affinity-0
+
+oc delete project node-anti-affinity-0
 wait_for_project_termination node-anti-affinity-0
 
 sleep 30
@@ -163,6 +166,6 @@ oc label nodes ${node_array[1]} cpu-
 oc label nodes ${node_array[2]} cpu-
 oc label nodes ${node_array[1]} --overwrite ${initial_node_label}
 
-show_node_labels
+#show_node_labels
 
 
