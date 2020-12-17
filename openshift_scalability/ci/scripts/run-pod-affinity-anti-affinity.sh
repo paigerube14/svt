@@ -1,6 +1,14 @@
 #!/bin/bash
 # set -x
 
+if [ "$#" -ne 1 ]; then
+  echo "syntax: $0 <TYPE>"
+  echo "<TYPE> should be either golang or python"
+  exit 1
+fi
+
+TYPE=$1
+
 date
 uname -a
 oc get clusterversion
@@ -13,6 +21,36 @@ echo "Date timestamp used for s1 pod spec filename: ${current_date}"
 
 total_pods=130
 echo "Expecting ${total_pods} pods to be deployed successfully for Pod Affinity and also for Pod Anti-Affinity tests"
+
+function golang_clusterloader
+{
+
+  # start GoLang cluster-loader
+  export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
+
+  cd /root/svt/openshift_scalability
+  ls -ltr config/golang
+
+  #### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
+  ## - Absolute path to config file needed
+  ## - .yaml extension is required now in config file name
+  ## - full path to the config file  must be under 70 characters total
+
+  MY_CONFIG=/root/svt/openshift_scalability/config/golang/pod-affinity.yaml
+  echo -e "\nRunning GoLang cluster-loader from openshift-tests binary with config file: ${MY_CONFIG}"
+  echo -e "\nContents of  config file: ${MY_CONFIG}"
+  cat ${MY_CONFIG}
+
+  VIPERCONFIG=$MY_CONFIG openshift-tests run-test "[Feature:Performance][Serial][Slow] Load cluster should load the cluster [Suite:openshift]"
+
+}
+
+function python_clusterloader() {
+  MY_CONFIG=../../config/node-affinity.yaml
+  python --version
+  python ../../cluster-loader.py -f $MY_CONFIG
+}
+
 
 # An error exit function
 function error_exit
@@ -141,23 +179,15 @@ sleep 30
 
 oc project default
 
-# start GoLang cluster-loader
-export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
-
-cd /root/svt/openshift_scalability
-ls -ltr config/golang
-
-#### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
-## - Absolute path to config file needed
-## - .yaml extension is required now in config file name
-## - full path to the config file  must be under 70 characters total
-
-MY_CONFIG=/root/svt/openshift_scalability/config/golang/pod-affinity.yaml
-echo -e "\nRunning GoLang cluster-loader from openshift-tests binary with config file: ${MY_CONFIG}"
-echo -e "\nContents of  config file: ${MY_CONFIG}"
-cat ${MY_CONFIG}
-
-VIPERCONFIG=$MY_CONFIG openshift-tests run-test "[Feature:Performance][Serial][Slow] Load cluster should load the cluster [Suite:openshift]"
+echo "Run tests"
+if [ "$TYPE" == "golang" ]; then
+  golang_clusterloader
+elif [ "$TYPE" == "python" ]; then
+  python_clusterloader
+else
+  echo "$TYPE is not a valid option, available options: golang, python"
+  exit 1
+fi
 
 cluster_loader_result=$?
 echo -e "\nClusterLoader return status: ${cluster_loader_result}"
