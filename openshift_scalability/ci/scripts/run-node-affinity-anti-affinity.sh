@@ -44,7 +44,6 @@ function check_no_error_pods()
   if [ $error -ne 0 ]; then
     echo "$error pods found, exiting"
     #loop to find logs of error pods?
-
     exit 1
   fi
 }
@@ -75,12 +74,12 @@ function wait_for_project_termination() {
 
 }
 
-#date
-#uname -a
-#oc get clusterversion
-#oc version
-#oc get node --show-labels
-#oc describe node | grep Runtime
+date
+uname -a
+oc get clusterversion
+oc version
+oc get node --show-labels
+oc describe node | grep Runtime
 
 compute_nodes=$(oc get nodes -l 'node-role.kubernetes.io/worker=' | awk '{print $1}' | grep -v NAME | xargs)
 
@@ -105,7 +104,6 @@ for i in {1..2}; do
   echo "Array element node_array index $i has value : ${node_array[${i}]}"
 done
 
-
 # Configuration: label nodes  for Affinity and anti-affinity scheduling
 echo -e "\nLabeling node ${node_array[1]} with label 'cpu=4'"
 oc label nodes ${node_array[1]} cpu=4
@@ -116,7 +114,7 @@ oc label nodes ${node_array[2]} cpu=6
 echo -e "\nLabeling node ${node_array[1]} with label 'beta.kubernetes.io/arch=intel'"
 oc label nodes ${node_array[1]} --overwrite beta.kubernetes.io/arch=intel
 
-#show_node_labels
+show_node_labels
 
 sleep 5
 
@@ -148,10 +146,12 @@ elif [ "$TYPE" == "python" ]; then
   pod_counts=$(python -c "import get_pod_total; get_pod_total.get_pod_counts_python('$MY_CONFIG')")
 fi
 
+#validate counts
+
 sleep 60
 
-# delete projects:  cleanup
-######### Need to clean up, delete projects and wait till all pods are gone
+# delete projects:
+######### Clean up: delete projects and wait till all projects and pods are gone
 oc delete project node-affinity-0
 wait_for_project_termination node-affinity-0
 
@@ -166,6 +166,6 @@ oc label nodes ${node_array[1]} cpu-
 oc label nodes ${node_array[2]} cpu-
 oc label nodes ${node_array[1]} --overwrite ${initial_node_label}
 
-#show_node_labels
+show_node_labels
 
 

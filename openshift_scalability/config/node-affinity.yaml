@@ -4,7 +4,7 @@ projects:
     tuning: default
     ifexists: delete
     pods:
-      - total: 30
+      - total: 40
       - num: 100
         image: gcr.io/google_containers/pause-amd64:3.0
         basename: pausepods
@@ -17,7 +17,7 @@ projects:
     tuning: default
     ifexists: delete
     pods:
-      - total: 30
+      - total: 40
       - num: 100
         image: docker.io/ocpqe/hello-pod
         basename: hellopods
@@ -33,8 +33,8 @@ tuningsets:
   - name: default
     pods:
       stepping:
-        stepsize: 50
-        pause: 30
+        stepsize: 40
+        pause: 10 s
       ratelimit:
         delay: 0
 
