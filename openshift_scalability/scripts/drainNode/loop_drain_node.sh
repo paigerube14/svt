@@ -40,6 +40,7 @@ function wait_until_all_pods_are_ready {
   start_time=$(date +%s)
 
   local ready_pods
+  counter=0
   while (( ($(date +%s) - ${start_time}) < ${timeout} ));
   do
     ready_pods=$(oc get pod --all-namespaces | grep ${pod} | grep -v deploy | grep Running | grep 1/1 | wc -l | xargs)
@@ -54,6 +55,7 @@ function wait_until_all_pods_are_ready {
     fi
     echo "some ${pod} pod is not ready yet ... waiting"
     sleep ${interval}
+    counter=$((counter + interval))
   done
 }
 
