@@ -68,13 +68,6 @@ function describe_nodes() {
 }
 
 CONFIG_FILE=../config/pyconfigStatefulSet.yaml
-#verify 4 worker nodes
-#worker_nodes=$(oc get nodes | grep worker | wc -l | xargs)
-#if [ $worker_nodes -lt 4 ]; then
-#  echo "Make sure you have 4 worker nodes, only currently have $worker_nodes"
-#  exit 1
-#fi
-
 
 #1 project with 60 templates in ../config/pyconfigStatefulSet.yaml
 rewrite_yaml 1 75 $CONFIG_FILE
