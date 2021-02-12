@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import re
 import subprocess
 import json
@@ -36,9 +36,9 @@ def run_build(build_def):
     namespace = build_def["namespace"]
     name = build_def["name"]
     build_name = "UNKNOWN"
-
+    #logger.info("run build " + str(build_def['namespace']) + str(build_def['name']))
     try:
-
+        #logger.info("\n\n\n\nstart build: " + str(name)+" in namespace: " + str(namespace) + "\n\n")
         build_name = run("oc start-build -n " + namespace + " " + name).rstrip()
         # 3.2 Comment out following line
         build_name = build_regex.search(build_name).group(1)
@@ -48,16 +48,16 @@ def run_build(build_def):
     except subprocess.CalledProcessError as err:
         if "UNKNOWN" != build_name:
             global_build_status[namespace + ":" + build_name] = STATUS_ERROR
-        logger.error("Command failed:  tproject=" + namespace + ",cmd=" +
+        logger.info("Command failed:  tproject=" + namespace + ",cmd=" +
                      err.cmd + ", retcode=" + str(err.returncode) + ", output="
                      + err.output)
     except Exception as e:
-        logger.error("cannot get build_name from: " + build_name)
-        logger.error(e)
+        logger.info("cannot get build_name from: " + build_name)
+        logger.info(e)
 
 
 def check_build_status(executor, futures, wait_flag):
-    logger.info("check_build_status ...")
+    #logger.info("check_build_status ..."+str(wait_flag))
     # wait the first build is started
     if wait_flag:
         logger.debug("wait 20 in check_build_status")
@@ -66,25 +66,30 @@ def check_build_status(executor, futures, wait_flag):
         logger.debug("no wait in check_build_status")
     while not all_builds_completed():
         try:
+            #logger.info("not completed")
             time.sleep(10)
             result = run("oc get build --all-namespaces --no-headers")
+            #logger.info('result  ' + str(result))
             parse(executor, result, futures)
         except Exception as e:
+            logger.info("error in get builds " + str(e))
             logger.error(e)
 
 
 def all_builds_completed():
-    logger.debug("global_build_status: " + str(global_build_status))
+    #logger.info("global_build_status: " + str(global_build_status))
     for key, value in global_build_status.iteritems():
         if value < 300:
+            #logger.info("false")
             return False
+    #logger.info("true")
     return True
 
 
 def parse(executor, result, futures):
     for line in result.splitlines():
         words = line.split()
-
+        #logger.info("words length parse " + str(len(words)))
         if len(words) >= 5:
             status = words[4]
             namespace = words[0]
@@ -93,18 +98,21 @@ def parse(executor, result, futures):
             idx = namespace + ":" + name
             if (status.startswith("Failed")) or (status == "Cancelled") or \
                     (status.startswith("Error")):
+                #logger.info("failed cancelled or error")
                 if idx in global_build_status.keys():
-                    logger.debug(idx + " FAILED")
+                    logger.info(idx + " FAILED")
                     if global_build_status[idx] < STATUS_NOT_COMPLETE:
                         global_build_status[idx] = STATUS_NOT_COMPLETE
                         stats_idx = idx[0:idx.rindex('-')]
                         global_build_stats[stats_idx]["failed"] += 1
             elif "Complete" == words[4]:
+                #logger.info("complete")
                 if idx in global_build_status.keys():
                     if global_build_status[idx] < STATUS_COMPLETE:
                         logger.info(idx + " Complete, Duration = " + duration_string)
                         global_build_status[idx] = STATUS_COMPLETE
                     if global_build_status[idx] < STATUS_LOGGING:
+                        logger.info("")
                         futures.append(
                             executor.submit(do_post_actions, namespace,
                                             name, timeparse(duration_string)))
@@ -155,6 +163,7 @@ def do_post_actions(namespace, build_name, build_time):
             global_build_stats[stats_idx]["invalid"] += 1
             global_build_status[idx] = STATUS_LOGGING_ERROR
         else:
+            logger.info("status logged random push " + str(STATUS_LOGGED))
             global_build_status[idx] = STATUS_LOGGED
             global_build_stats[stats_idx]["num"] += 1
             global_build_stats[stats_idx]["build_time"] += build_time
@@ -183,11 +192,16 @@ def select_random_builds(builds, num):
     i = 0
     while i < num:
         chosen_build = random.choice(builds)
+        #logger.info("chosen build " + str(chosen_build))
         build_idx = chosen_build["namespace"] + ":" + chosen_build["name"]
+        #logger.info("seen " + str(seen))
+        #logger.info("build idx " + str(build_idx))
         if build_idx not in seen:
             seen.add(build_idx)
             selected_builds.append(chosen_build)
             i += 1
+        else:
+            logger.info("build idx is in seen")
     return selected_builds
 
 
@@ -210,7 +224,9 @@ def run_builds(executor, executor1, all_builds):
         batch_size = global_config["batch"]
 
     wait_flag = True
+    logger.info('len selected builds' + str(len(selected_builds)))
     while len(selected_builds) > 0:
+        logger.info('run builds')
         this_batch_count = 0
         futures = []
         while this_batch_count < batch_size and len(selected_builds) > 0:
@@ -224,13 +240,14 @@ def run_builds(executor, executor1, all_builds):
         futures1 = []
         check_build_status(executor1, futures1, wait_flag)
         wait_flag = False
-        logger.debug("str(len(futures1)): " + str(len(futures1)))
+        logger.info("str(len(futures1)): " + str(len(futures1)))
         wait(futures1)
 
         time.sleep(int(global_config["sleep_time"]))
 
 
 def get_build_configs():
+    logger.info('get all build configs')
     all_builds = []
     try:
         output = run("oc get --all-namespaces=true -o json bc")
@@ -239,9 +256,10 @@ def get_build_configs():
             for build in build_configs["items"]:
                 all_builds.append({"namespace": build["metadata"]["namespace"],
                                 "name": build["metadata"]["name"]})
+        #logger.info("all builds " + str(all_builds))
         return all_builds
     except Exception:
-        logger.exception("cannot get BCs from the output: " + output)
+        logger.exception("cannot get BCs from the output: " + str(output))
         sys.exit(1)
 
 def start():
@@ -296,13 +314,14 @@ def start():
     if not global_config["nologin"]:
         login(global_config["master"], global_config["oseuser"],
               global_config["password"])
-
+    #create_auto_namespace(global_config["num_iterations"], "nodejs-mongodb-example")
     logger.info("Gathering build info...")
 
     if global_config["build_file"]:
         with open(global_config["build_file"]) as f:
             builds = f.read().replace('\n', '')
             all_builds = json.loads(builds)
+            logger.info("build file")
     else:
         all_builds = get_build_configs()
 
@@ -317,8 +336,7 @@ def start():
                                    "build_time_variance": 0,
                                    "push_time_variance": 0,
                                    "failed": 0, "invalid": 0}
-
-    #https://stackoverflow.com/questions/2427240/thread-safe-equivalent-to-pythons-time-strptime
+    logger.info("build stats " + str(global_build_stats))
     datetime.strptime('', '')
     for i in range(0, global_config["num_iterations"]):
 
@@ -329,8 +347,8 @@ def start():
                 as executor:
             with ThreadPoolExecutor(max_workers=global_config["worker"]) \
                     as executor1:
+                logger.info("thread i " + str(i))
                 run_builds(executor, executor1, all_builds)
-
 
     # output stats
     total_all_builds = 0
@@ -342,11 +360,11 @@ def start():
     min_all_builds = sys.maxint
     max_all_pushes = -1
     min_all_pushes = sys.maxint
-
+    logger.info("all builds " + str(all_builds))
     for build in all_builds:
         idx = build["namespace"] + ":" + build["name"]
         num = global_build_stats[idx]["num"]
-
+        logger.info('build num ' + str(num) + str(build['name']))
         if num > 0:
             logger.info("Build: " + idx)
             logger.info("\tTotal builds: " +
@@ -378,7 +396,7 @@ def start():
 
             total_builds += global_build_stats[idx]["num"]
         else:
-            logger.debug(idx + ": No successful builds")
+            logger.info(idx + ": No successful builds")
 
         total_failed += global_build_stats[idx]["failed"]
         total_invalid += global_build_stats[idx]["invalid"]
@@ -399,7 +417,8 @@ def start():
                     str(min_all_pushes))
         logger.info("Maximum push time, all good builds: " +
                     str(max_all_pushes))
-
+    else:
+        logger.info('total builds <= 0')
 
 def init_logger(my_logger):
     my_logger.setLevel(logging.DEBUG)
