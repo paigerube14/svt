@@ -1,4 +1,4 @@
-app_array=("django")
+app_array=("eap")
 
 file_name="conc_builds_2.out"
 

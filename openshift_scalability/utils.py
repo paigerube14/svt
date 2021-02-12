@@ -702,7 +702,7 @@ def ceph_image_create(i,globalvars):
     imagesize = 1024**3*int(cephimagesize)
 
     # ceph_volume function will create ceph images at ceph storage cluster side
-    ceph_volume(cephpool,cephimagename,imagesize)
+    #ceph_volume(cephpool,cephimagename,imagesize)
     with open("content/pv-ceph.json") as pvstream:
         pvjson = json.load(pvstream)
 

@@ -9,7 +9,7 @@ master=$1
 #build_array=(1 5 10 20 30 40 50)
 build_array=(1 8 15 30 45 60 75)
 #app_array=("cakephp" "eap" "django" "nodejs")
-app_array=("django")
+app_array=("cakephp" "eap" "django" "nodejs")
 # this number should be equal to the number of the created projects
 readonly PROJECT_NUM=75
 
@@ -21,11 +21,13 @@ function delete_projects()
 
 function create_projects()
 {
+  echo "create projects variable $1"
   python ../../../openshift_scalability/cluster-loader.py -f $1
 }
 
 function prepare_builds_file()
 {
+  echo "prepare builds file: $1"
   bc_name=`oc get bc -n  svt-$1-0 --no-headers | awk {'print $1'}`
   local running_build_file
   running_build_file="../content/running-builds.json"
@@ -44,17 +46,22 @@ function prepare_builds_file()
 
 function run_builds()
 {
+  echo "${build_array[@]}"
   for i in "${build_array[@]}"
   do
     echo "running $i $1 concurrent builds"
-    python ../../ose3_perf/scripts/build_test.py -z -n 2 -r $i -f ../content/running-builds.json &>> conc_builds_$1.out
+    fileName="conc_builds_$1.out"
+    python ../../ose3_perf/scripts/build_test.py -z -a -n 2 -r $i -f ../content/running-builds.json >> $fileName 2>&1
     sleep 30
   done
 }
 
 function wait_for_build_completion()
 {
-  running=`oc get pods --all-namespaces | grep svt | grep build | grep Running | wc -l`
+  echo "oc get pods --all-namespaces | grep svt | grep build | grep Running | wc -l"
+  sleep 10
+  running=`oc get pods --all-namespaces | grep svt | grep build | wc -l`
+  echo "running $running"
   while [ $running -ne 0 ]; do
     sleep 5
     running=`oc get pods --all-namespaces | grep svt | grep build | grep Running | wc -l`
@@ -64,10 +71,10 @@ function wait_for_build_completion()
 
 function wait_for_project_termination()
 {
-  terminating=`oc get projects | grep Terminating | wc -l`
+  terminating=`oc get projects | grep svt | grep Terminating | wc -l`
   while [ $terminating -ne 0 ]; do
     sleep 5
-    terminating=`oc get projects | grep Terminating | wc -l`
+    terminating=`oc get projects | grep svt | grep Terminating | wc -l`
     echo "$terminating projects are still terminating"
   done
 }
@@ -96,6 +103,7 @@ rm -rf *.out
 for app in "${app_array[@]}"
 do
   #oc login -u system:admin
+  wait_for_project_termination
   echo "Starting $app builds" >> conc_builds_$app.out
   create_projects "../content/conc_builds_$app.yaml"
   wait_for_build_completion
