@@ -20,33 +20,33 @@ function golang_clusterloader() {
   export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
   cur_loc=$(pwd)
 
-  #### OCP 4.2: new requirements to run golang cluster-loader from openshift-tests binary:
-  ## - Absolute path to config file needed
-  ## - .yaml extension is required now in config file name
-  ## - full path to the config file  must be under 70 characters total
-
   MY_CONFIG=$cur_loc/../../config/golang/configCreateLoadedProjects.yaml
-  #  echo -e "\nRunning GoLang cluster-loader from openshift-tests binary with config file: ${MY_CONFIG}"
-  #  echo -e "\nContents of  config file: ${MY_CONFIG}"
-  #cat ${MY_CONFIG}
 
   VIPERCONFIG=$MY_CONFIG openshift-tests run-test "[sig-scalability][Feature:Performance] Load cluster should populate the cluster [Slow][Serial]"
 
 }
 
-oc version
+function wait_for_project_termination() {
+  COUNTER=0
+  terminating=$(oc get projects | grep $1 | wc -l)
+  while [ $terminating -ne 0 ]; do
+    sleep 15
+    terminating=$(oc get projects | grep $1 | wc -l)
+    echo "$terminating projects are still there"
+    COUNTER=$((COUNTER + 1))
+    if [ $COUNTER -ge 20 ]; then
+      echo "$terminating projects are still there after 5 minutes"
+      exit 1
+    fi
+  done
+}
 
 echo -e "\nOCP cluster info:"
 oc version
 oc get nodes -o wide
-#oc get pods --all-namespaces -o wide
 
-#oc describe node | grep Runtime
+oc describe node | grep Runtime
 
-#Should already be in openshift_scalability
-#cd /root/svt/openshift_scalability
-#pwd
-#ls -ltr
 echo -e "\n\n############## Running cluster-loader ######################"
 export KUBECONFIG=${KUBECONFIG-$HOME/.kube/config}
 if [ "$TYPE" == "golang" ]; then
@@ -60,17 +60,15 @@ else
 
 fi
 
-echo -e "\nCurrent bash shell options: $(echo $-)"
-
 echo -e "\nFinished executing GoLang cluster-loader"
 
-oc get pods --all-namespaces -o wide
-echo -e "\nTotal number of running pods: $(oc get pods --all-namespaces -o wide | grep -v default | grep -ci running)"
+pods=$(oc get pods --all-namespaces -o wide | grep clusterproject | grep -ci running)
+echo -e "\nTotal number of running pods: $pods"
 
 TOTAL_CLUSTERPROJECTS=$(oc get projects | grep -c clusterproject)
 echo -e "\nTotal number of clusterproject namespaces created: ${TOTAL_CLUSTERPROJECTS}"
 
-sleep 2
+sleep 20
 
 for (( c=0; c<${TOTAL_CLUSTERPROJECTS}; c++ ))
 do
@@ -86,4 +84,4 @@ do
   oc delete project clusterproject${c}
 done
 
-oc get projects
+wait_for_project_termination clusterproject
