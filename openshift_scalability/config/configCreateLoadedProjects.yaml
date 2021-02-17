@@ -1,9 +1,10 @@
 projects:
-  - num: 99
+  - num: 10
     basename: clusterproject
     tuning: default
     ifexists: delete
     pods:
+      - total: 100
       - num: 5
         image: gcr.io/google_containers/pause-amd64:3.0
         basename: pausepods

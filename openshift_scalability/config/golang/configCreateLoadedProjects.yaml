@@ -2,7 +2,7 @@ provider: local
 ClusterLoader:
   cleanup: false
   projects:
-    - num: 99
+    - num: 10
       basename: clusterproject
       tuning: default
       ifexists: delete
