@@ -6,13 +6,25 @@ long_sleep() {
   sleep $sleep_time
 }
 
-clean() { echo "Cleaning environment"; oc delete project --wait=true clusterproject0; }
+
+function delete_projects() {
+  echo "deleting projects"
+  oc delete project -l purpose=test --wait=false
+}
+
 
 python_clusterloader() {
   MY_CONFIG=deployments.yaml
   ./cluster-loader.py --file=$MY_CONFIG
 }
-
+SECONDS=0
 python_clusterloader
-
+duration=$SECONDS
+echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
 long_sleep
+
+oc get nodes
+
+oc version
+
+oc cluster-info
