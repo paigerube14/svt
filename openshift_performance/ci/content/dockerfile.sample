@@ -1,0 +1,2 @@
+FROM registry.centos.org/centos/php-72-centos7
+RUN touch /tmp/built

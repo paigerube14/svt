@@ -1,0 +1,42 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    name: cakephp-mysql-example
+  annotations:
+    description: Defines how to build the application
+    template.alpha.openshift.io/wait-for-ready: "true"
+  name: cakephp-mysql-example
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: cakephp-mysql-example:latest
+  postCommit:
+    script: ./vendor/bin/phpunit
+  resources: {}
+  runPolicy: Serial
+  source:
+    git:
+      uri: "https://github.com/sclorg/cakephp-ex.git"
+    type: Git
+  strategy:
+    customStrategy:
+      forcePull: true
+      buildArgs:
+      - name: registryurl
+        value: "registry.centos.org/centos/php-72-centos7"
+      from:
+        kind: ImageStreamTag
+        name: builder-image-cakephp:latest
+        namespace: openshift
+    type: Custom
+  triggers:
+  - type: ConfigChange
+  - github:
+      secret: Fmp1m6dDYjFripnWdrxddGtdSD2HNFbOYQcYEpsx
+    type: GitHub
+status:
+  lastVersion: 1

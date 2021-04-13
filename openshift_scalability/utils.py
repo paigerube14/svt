@@ -102,6 +102,36 @@ def get_route():
 
     return localhost, router_ip, routes_list
 
+def create_custom_obj(obj_file, num, parameters, globalvars):
+    logger.debug("create_obj function called")
+
+    i = 0
+    while i < int(num):
+
+        if globalvars["kubeopt"]:
+            check = oc_command("kubectl create -f "+ obj_file + \
+                " --namespace %s" % globalvars["namespace"], globalvars)
+        else:
+            check = oc_command_with_retry("oc create -f "+ obj_file + \
+                " --namespace %s" % globalvars["namespace"], globalvars)
+        logger.info("custom obj check " + str(check))
+        if "tuningset" in globalvars:
+            if "custom" in globalvars["tuningset"]:
+                customtuningset = globalvars["tuningset"]["custom"]
+                if "stepping" in customtuningset:
+                    stepsize = customtuningset["stepping"]["stepsize"]
+                    pause = customtuningset["stepping"]["pause"]
+                    globalvars["customtuningset"] = globalvars["totalobj"] + 1
+                    obj_created = int(globalvars["totalobj"])
+                if obj_created % stepsize == 0:
+                    time.sleep(calc_time(pause))
+                if "rate_limit" in customtuningset:
+                    delay = customtuningset["rate_limit"]["delay"]
+                    time.sleep(calc_time(delay))
+
+        i = i + 1
+
+
 def create_template(templatefile, num, parameters, globalvars):
     logger.debug("create_template function called")
 
@@ -150,6 +180,7 @@ def create_template(templatefile, num, parameters, globalvars):
     while i < int(num):
         tmpfile=tempfile.NamedTemporaryFile(mode='w')
         templatejson = copy.deepcopy(data)
+        logger.info("tempalte file " + str(templatefile))
         cmdstring = "oc process -f %s" % templatefile
 
         if parameters:
@@ -166,14 +197,17 @@ def create_template(templatefile, num, parameters, globalvars):
 
         processedstr = oc_command_with_retry(cmdstring, globalvars)
         templatejson = json.loads(processedstr[0])
+
         json.dump(templatejson, tmpfile)
         tmpfile.flush()
+
         if globalvars["kubeopt"]:
             check = oc_command("kubectl create -f "+tmpfile.name + \
                 " --namespace %s" % globalvars["namespace"], globalvars)
         else:
             check = oc_command_with_retry("oc create -f "+ tmpfile.name + \
                 " --namespace %s" % globalvars["namespace"], globalvars)
+        logger.info("tempalte check " + str(check))
         if "tuningset" in globalvars:
             if "templates" in globalvars["tuningset"]:
                 templatestuningset = globalvars["tuningset"]["templates"]
@@ -227,6 +261,7 @@ def create_service(servconfig, num, globalvars):
         else:
             check = oc_command("oc create -f " + tmpfile.name, \
                 globalvars)
+        logger.info('check sercie ' + str(check))
         i = i + 1
         del (dataserv)
         tmpfile.close()
@@ -426,9 +461,9 @@ def single_project(testconfig, projname, globalvars):
     globalvars["createproj"] = True
 
     if project_exists(projname,globalvars) :
-        if testconfig["ifexists"] == "delete" :
+        if testconfig["ifexists"] == "delete":
             delete_project(projname,globalvars)
-        elif testconfig["ifexists"] == "reuse" :
+        elif testconfig["ifexists"] == "reuse":
             globalvars["createproj"] = False
         else:
             logger.error("Project " + projname + " already exists. Use ifexists=reuse/delete in config")
@@ -466,6 +501,8 @@ def single_project(testconfig, projname, globalvars):
     globalvars["namespace"] = projname
     if "quota" in testconfig:
         quota_handler(testconfig["quota"],globalvars)
+    if "custom" in testconfig:
+        custom_obj_handler(testconfig["custom"], globalvars)
     if "templates" in testconfig:
         template_handler(testconfig["templates"], globalvars)
     if "services" in testconfig:
@@ -602,6 +639,27 @@ def template_handler(templates, globalvars):
     if "totaltemplates" in globalvars:
         del (globalvars["totaltemplates"])
 
+def custom_obj_handler(obj_files, globalvars):
+    logger.debug("custom_obj_handler function called")
+
+    logger.info("custom file: %s", obj_files)
+    for objlist in obj_files:
+        num = int(objlist["num"])
+        objfile = objlist["file"]
+
+        if "parameters" in objlist:
+            parameters = objlist["parameters"]
+        else:
+            parameters = None
+        if "tuningset" in globalvars:
+            if "templates" in globalvars["tuningset"]:
+                if "stepping" in globalvars["tuningset"]["custom"]:
+                    globalvars["totalobj"] = 0
+
+        create_custom_obj(objfile, num, parameters, globalvars)
+
+    if "totalobj" in globalvars:
+        del (globalvars["totalobj"])
 
 def service_handler(inputservs, globalvars):
     logger.debug("service_handler function called")
