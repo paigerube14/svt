@@ -1,9 +1,10 @@
 projects:
 - basename: fiotest
+  ifexists: reuse
   num: 1
   templates:
-  - file: ../../content/fio/fio-template1.json
-    num: 1
+  - file: ./content/fio/fio-template1.json
+    num: 25
     parameters:
     - STORAGE_CLASS: gp2
     - STORAGE_SIZE: 1Gi
