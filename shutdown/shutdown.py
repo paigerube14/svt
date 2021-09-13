@@ -8,7 +8,6 @@ from kubernetes import client, config
 import os
 import yaml
 import optparse
-import pyfiglet
 import logging
 
 def initialize_clients(kubeconfig_path):
@@ -209,11 +208,11 @@ def main(cfg):
 
         wait_for_all_nodes_ready(infras)
 
-        cluster_operators = run_cmd("oc get co")
+        cluster_operators = run_cmd("oc get co --kubeconfig="+kubeconfig_path)
 
-        nodes = run_cmd("oc get nodes")
+        nodes = run_cmd("oc get nodes --kubeconfig="+kubeconfig_path)
         if "NotReady" in nodes:
-            run_cmd('oc get csr | grep Pending | cut -f1 -d" " | while read i; do oc adm certificate approve $i; done')
+            run_cmd('oc get csr --kubeconfig='+kubeconfig_path + '| grep Pending | cut -f1 -d" " | while read i; do oc adm certificate approve $i; done')
 
 
 
