@@ -1,6 +1,7 @@
 shutdown:
-  - downtime: 60 s
-    shutdown_master_num: 0
-    shutdown_worker_num: 1
+  - downtime: 6 s
+    shutdown_master_num: all
+    shutdown_worker_num: all
     cloud_type: aws
     kubeconfig_path: /root/.kube/config
+    dont_restart_masters: 1

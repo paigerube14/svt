@@ -110,6 +110,10 @@ def main(cfg):
         shutdown_worker_num = config.get("shutdown_worker_num", "all")
         shutdown_infra_num = config.get("shutdown_infra_num", "all")
 
+        dont_restart_masters = config.get("dont_restart_masters", 0)
+        dont_restart_workers = config.get("dont_restart_workers", 0)
+        dont_restart_infras = config.get("dont_restart_infras", 0)
+
         ssh_file = config.get("ssh_file", "")
 
         initialize_clients(kubeconfig_path)
@@ -169,7 +173,15 @@ def main(cfg):
 
         # wait period
         time.sleep(downtime)
-
+        logging.info("masters before " + str(masters))
+        if dont_restart_masters > 0:
+            masters = masters[dont_restart_masters:]
+        if dont_restart_workers > 0:
+            workers = workers[dont_restart_workers:]
+        if dont_restart_infras > 0:
+            infras = infras[dont_restart_infras: ]
+        logging.info("masters " + str(masters))
+        node_list = workers + infras + masters
         # restart cluster
         # start nodes based on cloud provider
         if cloud_type == "aws":
@@ -199,7 +211,11 @@ def main(cfg):
 
         cluster_operators = run_cmd("oc get co")
 
-        run_cmd("oc get nodes")
+        nodes = run_cmd("oc get nodes")
+        if "NotReady" in nodes:
+            run_cmd('oc get csr | grep Pending | cut -f1 -d" " | while read i; do oc adm certificate approve $i; done')
+
+
 
 if __name__ == "__main__":
     # Initialize the parser to read the config
