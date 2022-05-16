@@ -14,6 +14,14 @@ function wait_for_pod_creation() {
   done
 }
 
+function delete_eap_pods() {
+  COUNTER=0
+  while [ $COUNTER -le 20 ] ; do
+    oc delete project eap64-mysql$COUNTER
+    COUNTER=$((COUNTER + 1))
+  done
+}
+
 function wait_for_pod_deletion() {
   COUNTER=0
   terminating=$(oc get pods -A | grep $1 | grep -c "Terminating" )

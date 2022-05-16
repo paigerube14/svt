@@ -33,7 +33,7 @@ done
 
 worker_name=$(get_node_name $first_worker)
 first_node_count=$(oc get pods -o wide -A | grep 'eap64-mysql' | grep Running | grep $first_worker -c | xargs)
-if [[ $first_node_count -ge 20 ]]; then
+if [[ $first_node_count -ge 18 ]]; then
   echo "FAIL"
 else
   echo "PASS"
