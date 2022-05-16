@@ -16,10 +16,10 @@ done
 
 source ./common_func.sh
 
-##have to have following profiles set
-##profiles:
-##    - TopologyAndDuplicates
-##    - EvictPodsWithPVC
+#have to have following profiles set
+#profiles:
+#    - TopologyAndDuplicates
+#    - EvictPodsWithPVC
 
 oc create -f content/rc_local_storage.yaml
 
@@ -43,19 +43,19 @@ worker_nme=$(get_node_name $first_worker)
 
 echo $worker_nme
 pod_count=$(get_pod_count rcexpv $first_worker)
-echo $pod_count
-if [[ $pod_count -lt 115 ]]; then
+echo "$pod_count rcexpv pods on $first_worker"
+if [[ $pod_count -lt 110 ]]; then
   echo "PASS"
 else
-  echo "FAIL"
+  echo "FAIL, expected there to be less than 110 pods on worker node"
 fi
 
 
 lc_pod_count=$(get_pod_count rcexlc $first_worker)
-echo $lc_pod_count
+echo "$lc_pod_count rcexlc pods on $first_worker"
 
-if [[ $lc_pod_count -ge 115 ]]; then
+if [[ $lc_pod_count -ge 110 ]]; then
   echo "PASS"
 else
-  echo "FAIL"
+  echo "FAIL, expected 110 pods still on worker node"
 fi

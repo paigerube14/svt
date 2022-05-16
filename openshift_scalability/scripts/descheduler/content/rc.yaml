@@ -3,7 +3,7 @@ kind: ReplicationController
 metadata:
   name: rcexpv
 spec:
-  replicas: 115
+  replicas: 110
   selector:
     app: sise
   template:

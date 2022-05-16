@@ -18,35 +18,35 @@ for worker in ${worker_nodes}; do
 done
 source ./common_func.sh
 
-#### creates hello-1 pods
-#oc create deployment hello-first --image=gcr.io/google-containers/pause-amd64:3.0
-## oc edit dc hello and change the replica to 12
-#oc scale --replicas=$scale_num deployment/hello-first
-#
-#wait_for_pod_creation hello-first
-#
-#oc adm cordon $first_worker
-#oc adm uncordon $middle_worker
-#
-## create hello pods
-#oc create deployment hello-second --image=gcr.io/google-containers/pause-amd64:3.0
-#oc scale --replicas=$scale_num deployment/hello-second
-#wait_for_pod_creation hello-second
-#
-#oc adm cordon $middle_worker
-#oc adm uncordon $last_worker
-#
-#
-## create hello pods
-#oc create deployment hello-third --image=gcr.io/google-containers/pause-amd64:3.0
-#oc scale --replicas=$scale_num deployment/hello-third
-#
-##wait till pods are running
-#wait_for_pod_creation hello-third
-#
-#uncordon_all_nodes
-#
-#wait_for_descheduler_to_run
+### creates hello-1 pods
+oc create deployment hello-first --image=gcr.io/google-containers/pause-amd64:3.0
+# oc edit dc hello and change the replica to 12
+oc scale --replicas=$scale_num deployment/hello-first
+
+wait_for_pod_creation hello-first
+
+oc adm cordon $first_worker
+oc adm uncordon $middle_worker
+
+# create hello pods
+oc create deployment hello-second --image=gcr.io/google-containers/pause-amd64:3.0
+oc scale --replicas=$scale_num deployment/hello-second
+wait_for_pod_creation hello-second
+
+oc adm cordon $middle_worker
+oc adm uncordon $last_worker
+
+
+# create hello pods
+oc create deployment hello-third --image=gcr.io/google-containers/pause-amd64:3.0
+oc scale --replicas=$scale_num deployment/hello-third
+
+#wait till pods are running
+wait_for_pod_creation hello-third
+
+uncordon_all_nodes
+
+wait_for_descheduler_to_run
 
 get_descheduler_evicted
 
