@@ -23,12 +23,3 @@ wait_for_pod_deletion "rcexlc"
 wait_for_pod_deletion "rcexpv"
 
 oc delete project -l purpose=test
-
-#oc delete configmap cluster -n openshift-kube-descheduler-operator
-#oc delete deployment cluster -n openshift-kube-descheduler-operator
-#oc delete service metrics -n openshift-kube-descheduler-operator
-#
-#oc delete secret kube-descheduler-serving-cert -n openshift-kube-descheduler-operator
-#
-#oc delete kubedescheduler cluster -n openshift-kube-descheduler-operator
-

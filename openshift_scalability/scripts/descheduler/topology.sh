@@ -24,9 +24,9 @@ oc get pods -o wide
 
 uncordon_all_nodes
 
-#wait 5 minutes
+wait_for_descheduler_to_run
 
-# get tail of logs from cluster-* pod in -n openshift-kube-descheduler-operator
+get_descheduler_evicted
 
 
 
