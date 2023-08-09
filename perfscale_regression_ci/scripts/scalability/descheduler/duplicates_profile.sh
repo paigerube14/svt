@@ -13,7 +13,6 @@ source duplicates_profile_env.sh
 source ../../../utils/run_workload.sh
 source ../../custom_workload_env.sh
 
-project_name="perf-test-pod-descheduler"
 project_label="test=$project_name"
 object_type="pods"
 i=0
@@ -21,13 +20,9 @@ last_worker=""
 first_worker=""
 middle_worker=""
 pass_or_fail=0
-scale_num=190
+scale_num=250
 
 validate_descheduler_installation "TopologyAndDuplicates"
-
-echo "Create and label new project"
-prepare_project $project_name $project_label
-
 
 echo "Prepare worker nodes"
 worker_nodes=$(get_worker_nodes)
