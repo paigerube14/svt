@@ -32,15 +32,15 @@ export JOB_ITERATIONS=${params[2]:-"120"}
 echo "Testing with $CLOUD $REPLICAS $JOB_ITERATIONS"
 
 # Install dittybopper to check resource usage
-#install_dittybopper
+install_dittybopper
 
-# if [ $? -eq 0 ]; 
-# then 
+if [ $? -eq 0 ]; 
+then 
     # Cluster health check prior to testing
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo "Run workload on current worker nodes machineset." 
-    #run_workload
-    #sleep 180
+    run_ocp_workload
+    sleep 180
     echo "Deploy new machineset and scale down one machine at a time from existing machinesets." 
     cd ./replace_nodes/clouds
     . ./${CLOUD}.sh
@@ -56,15 +56,15 @@ echo "Testing with $CLOUD $REPLICAS $JOB_ITERATIONS"
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo
     echo "Rerun workload on new machineset."
-    run_workload
+    run_ocp_workload
     sleep 180
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo
     echo "Test complete!"
     echo "Verify test results as defined in Polarion test case."
     exit 0
-# else
-#     echo "Failed to install dittybopper."
-#     exit 1
-# fi
+else
+    echo "Failed to install dittybopper."
+    exit 1
+fi
 
