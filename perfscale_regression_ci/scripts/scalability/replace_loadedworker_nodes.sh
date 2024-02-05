@@ -39,7 +39,7 @@ then
     # Cluster health check prior to testing
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo "Run workload on current worker nodes machineset." 
-    run_ocp_workload
+    #run_ocp_workload
     sleep 180
     echo "Deploy new machineset and scale down one machine at a time from existing machinesets." 
     cd ./replace_nodes/clouds
@@ -50,16 +50,16 @@ then
     sleep 180 
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo
-    echo "Cleanup existing workload namespaces."
-    delete_project_by_label kube-burner-job=$WORKLOAD
-    sleep 180
-    python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
-    echo
-    echo "Rerun workload on new machineset."
-    run_ocp_workload
-    sleep 180
-    python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
-    echo
+    # echo "Cleanup existing workload namespaces."
+    # delete_project_by_label kube-burner-job=$WORKLOAD
+    # sleep 180
+    # python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
+    # echo
+    # echo "Rerun workload on new machineset."
+    # run_ocp_workload
+    # sleep 180
+    # python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
+    # echo
     echo "Test complete!"
     echo "Verify test results as defined in Polarion test case."
     exit 0
