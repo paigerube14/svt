@@ -23,23 +23,32 @@ pass_or_fail=0
 
 validate_descheduler_installation "LifecycleAndUtilization"
 
-echo "Prepare worker nodes"
-worker_nodes=$(get_worker_nodes)
 
-COUNTER=0
-iterations=3
-echo "counter $COUNTER"
-cordon_num_nodes 4
 
-echo "======Use kube-burner to load the cluster with test objects - $NAMESPACE======"
-run_workload
+for ((i = 0; i < 3; i++)); do
+    echo "Prepare worker nodes"
+    worker_nodes=$(get_worker_nodes)
 
-wait_for_obj_creation build pods
+    COUNTER=0
+    iterations=3
+    echo "counter $COUNTER"
+    cordon_num_nodes 4
 
-uncordon_all_nodes
+    echo "======Use kube-burner to load the cluster with test objects - $NAMESPACE======"
+    run_workload
 
-echo "Wait for descheduler to run"
-wait_for_descheduler_to_run
+    wait_for_obj_creation build pods
 
-echo "Get descheduler evicted, want to be more than 100 "
-get_descheduler_evicted
+    uncordon_all_nodes
+
+    echo "Wait for descheduler to run"
+    wait_for_descheduler_to_run
+
+    echo "Get descheduler evicted, want to be more than 100 "
+    get_descheduler_evicted
+
+    sleep 90
+
+    delete_project_by_label kube-burner-job
+    sleep 30 
+done
