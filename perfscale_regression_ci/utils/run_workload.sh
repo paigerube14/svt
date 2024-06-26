@@ -21,4 +21,15 @@ run_workload(){
     cleanup
 }
 
+
+run_ocp_workload(){
+    if [[ ! -d e2e-benchmarking/workloads/kube-burner-ocp-wrapper ]]; then
+        setup
+    fi
+    cd e2e-benchmarking/workloads/kube-burner-ocp-wrapper
+    ./run.sh |& tee "kube-burner-$(date +%Y%m%d%H%M%S).out"
+    cd ../../.. #prepare for cleanup
+    cleanup
+}
+
 set +ex

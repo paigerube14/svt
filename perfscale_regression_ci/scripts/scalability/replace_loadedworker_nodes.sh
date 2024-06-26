@@ -18,7 +18,7 @@
 
 source ./replace_loadedworker_nodes_env.sh
 source ../common.sh
-source ../../utils/run_workload.sh
+source ../../utils/run_ocp_workload.sh
 
 # If parameters is set from upstream ci, overwrite params
 echo "Upstream PARAMETERS set to $PARAMETERS"
@@ -39,7 +39,7 @@ then
     # Cluster health check prior to testing
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo "Run workload on current worker nodes machineset." 
-    run_workload
+    run_ocp_workload
     sleep 180
     echo "Deploy new machineset and scale down one machine at a time from existing machinesets." 
     cd ./replace_nodes/clouds
@@ -56,7 +56,7 @@ then
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo
     echo "Rerun workload on new machineset."
-    run_workload
+    run_ocp_workload
     sleep 180
     python -c "import utils.ocp_utils as ocp_utils; ocp_utils.cluster_health_check()"
     echo
