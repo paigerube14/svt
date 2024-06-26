@@ -18,7 +18,7 @@
 
 source ./replace_loadedworker_nodes_env.sh
 source ../common.sh
-source ../../utils/run_ocp_workload.sh
+source ../../utils/run_workload.sh
 
 # If parameters is set from upstream ci, overwrite params
 echo "Upstream PARAMETERS set to $PARAMETERS"
